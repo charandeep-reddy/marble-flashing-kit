@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # flash_axion_fastboot.ps1
 # Flashes AxionOS on Poco F5 (marble) fully via fastboot/fastbootd — no sideload.
 # Requires device already sitting in fastboot (bootloader) mode.
@@ -55,12 +55,12 @@ function step {
 
 function info {
     param([string]$Message)
-    Write-Host "  → $Message" -ForegroundColor Cyan
+    Write-Host "  -> $Message" -ForegroundColor Cyan
 }
 
 function ok {
     param([string]$Message)
-    Write-Host "  ✓ $Message" -ForegroundColor Green
+    Write-Host "  [*] $Message" -ForegroundColor Green
 }
 
 function warn {
@@ -71,13 +71,13 @@ function warn {
 function die {
     param([string]$Message)
     Write-Host ""
-    Write-Host "  ✗ ERROR: $Message" -ForegroundColor Red
+    Write-Host "  [X] ERROR: $Message" -ForegroundColor Red
     Write-Host ""
     exit 1
 }
 
 function Get-FastbootState {
-    $output = & $FASTBOOT devices 2>&1
+    $output = cmd /c "`"$FASTBOOT`" devices 2>&1"
     if ($output -match "\S+\s+fastboot") { return "fastboot" }
     return $null
 }
@@ -85,7 +85,7 @@ function Get-FastbootState {
 # fastboot getvar writes to stderr; parse "name: value" out of it
 function Get-FastbootVar {
     param([string]$Var)
-    $output = & $FASTBOOT getvar $Var 2>&1
+    $output = cmd /c "`"$FASTBOOT`" getvar $Var 2>&1"
     foreach ($line in $output) {
         if ($line -match "^$Var`: (.+)") {
             return $Matches[1].Trim()
@@ -98,11 +98,11 @@ function Wait-Fastbootd {
     param([int]$Timeout)
     $waited = 0
     while ($waited -lt $Timeout) {
-        Write-Host "`r  → waiting for fastbootd... ($waited/$Timeout) " -NoNewline -ForegroundColor Cyan
+        Write-Host "`r  -> waiting for fastbootd... ($waited/$Timeout) " -NoNewline -ForegroundColor Cyan
         if (Get-FastbootState) {
             $state = Get-FastbootVar -Var "is-userspace"
             if ($state -eq "yes") {
-                Write-Host "`r  ✓ fastbootd is up.                  " -ForegroundColor Green
+                Write-Host "`r  [*] fastbootd is up.                  " -ForegroundColor Green
                 return
             }
         }
@@ -149,7 +149,7 @@ function elapsed {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host "▶ AxionOS Fastboot Flash" -ForegroundColor Blue
+Write-Host ">> AxionOS Fastboot Flash" -ForegroundColor Blue
 Write-Host "rom: $AXION_ZIP   recovery: $RECOVERY_IMG (or fallback from payload)" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------
@@ -310,5 +310,5 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
-Write-Host "✓ AxionOS flash complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
+Write-Host "[*] AxionOS flash complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
 Write-Host ""

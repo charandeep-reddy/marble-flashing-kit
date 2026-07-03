@@ -16,5 +16,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Auto-unblock files downloaded from the internet
+powershell -NoProfile -Command "Get-ChildItem '%~dp0*.ps1','%~dp0*.exe','%~dp0*.dll' -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" >nul 2>&1
+
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PS1%" %*
 exit /b %ERRORLEVEL%

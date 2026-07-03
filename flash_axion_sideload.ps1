@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # flash_axion_sideload.ps1
 # Sideload-flashes AxionOS axion.zip via OFOX recovery on Poco F5 (marble)
 # Prompts for dirty flash vs clean flash before installing.
@@ -49,12 +49,12 @@ function step {
 
 function info {
     param([string]$Message)
-    Write-Host "  → $Message" -ForegroundColor Cyan
+    Write-Host "  -> $Message" -ForegroundColor Cyan
 }
 
 function ok {
     param([string]$Message)
-    Write-Host "  ✓ $Message" -ForegroundColor Green
+    Write-Host "  [*] $Message" -ForegroundColor Green
 }
 
 function warn {
@@ -65,13 +65,13 @@ function warn {
 function die {
     param([string]$Message)
     Write-Host ""
-    Write-Host "  ✗ ERROR: $Message" -ForegroundColor Red
+    Write-Host "  [X] ERROR: $Message" -ForegroundColor Red
     Write-Host ""
     exit 1
 }
 
 function Get-AdbState {
-    $output = & $ADB devices 2>&1
+    $output = cmd /c "`"$ADB`" devices 2>&1"
     $lines = $output -split "`r?`n"
     for ($i = 1; $i -lt $lines.Count; $i++) {
         $parts = $lines[$i] -split "\s+"
@@ -81,7 +81,7 @@ function Get-AdbState {
 }
 
 function Get-FastbootState {
-    $output = & $FASTBOOT devices 2>&1
+    $output = cmd /c "`"$FASTBOOT`" devices 2>&1"
     if ($output -match "\S+\s+fastboot") { return "fastboot" }
     return $null
 }
@@ -95,9 +95,9 @@ function Wait-AdbState {
     $state = $null
     while ($waited -lt $Timeout) {
         $state = Get-AdbState
-        Write-Host "`r  → waiting for '$Target' state... ($waited/$Timeout) " -NoNewline -ForegroundColor Cyan
+        Write-Host "`r  -> waiting for '$Target' state... ($waited/$Timeout) " -NoNewline -ForegroundColor Cyan
         if ($state -eq $Target) {
-            Write-Host "`r  ✓ device reached '$Target' state.                  " -ForegroundColor Green
+            Write-Host "`r  [*] device reached '$Target' state.                  " -ForegroundColor Green
             return
         }
         Start-Sleep -Seconds $POLL_INTERVAL
@@ -113,10 +113,10 @@ function countdown {
         [string]$Label
     )
     for ($i = $Secs; $i -gt 0; $i--) {
-        Write-Host "`r  → $Label ($i)   " -NoNewline -ForegroundColor Cyan
+        Write-Host "`r  -> $Label ($i)   " -NoNewline -ForegroundColor Cyan
         Start-Sleep -Seconds 1
     }
-    Write-Host "`r  ✓ $Label done.                 " -ForegroundColor Green
+    Write-Host "`r  [*] $Label done.                 " -ForegroundColor Green
 }
 
 function elapsed {
@@ -163,7 +163,7 @@ function Ask-RebootSystem {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host "▶ AxionOS Sideload" -ForegroundColor Blue
+Write-Host ">> AxionOS Sideload" -ForegroundColor Blue
 Write-Host "rom: $AXION_ZIP" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------
@@ -220,7 +220,7 @@ step "Entering sideload mode"
 # pipe / non-zero exit even on success. We ignore that exit code and
 # confirm the real result below.
 info "sending 'adb shell twrp sideload'"
-$null = & $ADB shell twrp sideload 2>&1
+$null = cmd /c "`"$ADB`" shell twrp sideload 2>&1"
 
 Wait-AdbState -Target "sideload" -Timeout $SIDELOAD_WAIT_TIMEOUT
 
@@ -253,5 +253,5 @@ if (Ask-RebootSystem) {
 }
 
 Write-Host ""
-Write-Host "✓ AxionOS install complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
+Write-Host "[*] AxionOS install complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
 Write-Host ""

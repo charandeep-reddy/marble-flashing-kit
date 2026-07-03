@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # flash_firmware_fastboot.ps1
 # Fastboot-flashes firmware.zip (xiaomi-flashable-firmware-creator format)
 # on Poco F5 (marble).
@@ -47,12 +47,12 @@ function step {
 
 function info {
     param([string]$Message)
-    Write-Host "  → $Message" -ForegroundColor Cyan
+    Write-Host "  -> $Message" -ForegroundColor Cyan
 }
 
 function ok {
     param([string]$Message)
-    Write-Host "  ✓ $Message" -ForegroundColor Green
+    Write-Host "  [*] $Message" -ForegroundColor Green
 }
 
 function warn {
@@ -63,13 +63,13 @@ function warn {
 function die {
     param([string]$Message)
     Write-Host ""
-    Write-Host "  ✗ ERROR: $Message" -ForegroundColor Red
+    Write-Host "  [X] ERROR: $Message" -ForegroundColor Red
     Write-Host ""
     exit 1
 }
 
 function Get-FastbootState {
-    $output = & $FASTBOOT devices 2>&1
+    $output = cmd /c "`"$FASTBOOT`" devices 2>&1"
     if ($output -match "\S+\s+fastboot") { return "fastboot" }
     return $null
 }
@@ -89,7 +89,7 @@ function Format-Size {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host "▶ Firmware Fastboot Flash" -ForegroundColor Blue
+Write-Host ">> Firmware Fastboot Flash" -ForegroundColor Blue
 Write-Host "device: marble (Poco F5) | firmware: $FIRMWARE_ZIP" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------
@@ -139,13 +139,13 @@ foreach ($partition in $partitions) {
 
     & $FASTBOOT flash "${partition}_ab" $img
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓" -ForegroundColor Green
+        Write-Host "[*]" -ForegroundColor Green
     } else {
-        Write-Host "✗" -ForegroundColor Red
+        Write-Host "[X]" -ForegroundColor Red
         die "flashing '$partition' to '${partition}_ab' failed."
     }
 }
 
 Write-Host ""
-Write-Host "✓ Firmware flash complete — $TOTAL_PARTITIONS/$TOTAL_PARTITIONS partitions flashed in $(elapsed)s" -ForegroundColor Green
+Write-Host "[*] Firmware flash complete — $TOTAL_PARTITIONS/$TOTAL_PARTITIONS partitions flashed in $(elapsed)s" -ForegroundColor Green
 Write-Host ""
