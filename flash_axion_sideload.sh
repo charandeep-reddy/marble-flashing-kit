@@ -5,7 +5,7 @@
 # Prompts for dirty flash vs clean flash before installing.
 #
 # Dirty flash : no wipes, just install axion.zip over existing setup
-# Clean flash : fastboot -w (userdata + metadata), then install
+# Clean flash : fastboot -w (erase user data), then install
 #
 # Flow:
 #   1. Verify axion.zip exists
@@ -114,7 +114,7 @@ elapsed() {
 ask_flash_type() {
     printf '\n  %sHow do you want to flash %s?%s\n\n' "$C_BOLD" "$AXION_ZIP" "$C_RESET"
     printf '    %s1)%s Dirty flash  %s— install over existing setup, no wipes%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
-    printf '    %s2)%s Clean flash  %s— fastboot -w (userdata + metadata), then install%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
+    printf '    %s2)%s Clean flash  %s— fastboot -w (erase user data), then install%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
     printf '        %s(internal storage / your files are NOT touched either way)%s\n\n' "$C_DIM" "$C_RESET"
 
     while true; do
@@ -169,7 +169,7 @@ step "Wiping (${FLASH_TYPE} flash)"
 if [ "$FLASH_TYPE" = "clean" ]; then
     info "running 'fastboot -w'..."
     fastboot -w || die "'fastboot -w' failed."
-    ok "userdata + metadata wiped"
+    ok "user data erased"
 else
     info "dirty flash selected, skipping wipes"
 fi

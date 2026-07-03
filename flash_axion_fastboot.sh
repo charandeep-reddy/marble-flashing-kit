@@ -5,7 +5,7 @@
 # Requires device already sitting in fastboot (bootloader) mode.
 #
 # Dirty flash : no wipes, straight install
-# Clean flash : fastboot -w (userdata + cache) after extraction, just before first flash
+# Clean flash : fastboot -w (erase user data) after extraction, just before first flash
 #
 # Flow:
 #   1. Pre-flight checks (deps, device in fastboot mode)
@@ -106,7 +106,7 @@ wait_for_fastbootd() {
 ask_flash_type() {
     printf '\n  %sHow do you want to flash %s?%s\n\n' "$C_BOLD" "$AXION_ZIP" "$C_RESET"
     printf '    %s1)%s Dirty flash  %s— install over existing setup, no wipes%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
-    printf '    %s2)%s Clean flash  %s— fastboot -w (userdata + cache) after extraction, then install%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
+    printf '    %s2)%s Clean flash  %s— fastboot -w (erase user data), then install%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
     printf '        %s(internal storage / your files are NOT touched either way)%s\n\n' "$C_DIM" "$C_RESET"
 
     while true; do
@@ -218,7 +218,7 @@ if [ "$FLASH_TYPE" = "clean" ]; then
     [ -n "$(get_fastboot_state)" ] || die "device not in fastboot mode. Boot into fastboot first, then rerun."
     info "running 'fastboot -w'..."
     fastboot -w || die "'fastboot -w' failed."
-    ok "userdata + cache wiped"
+    ok "user data erased"
 else
     info "dirty flash selected, skipping wipe"
 fi
