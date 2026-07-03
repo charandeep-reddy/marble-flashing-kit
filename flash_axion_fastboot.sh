@@ -72,13 +72,13 @@ check_bin() {
 }
 
 get_fastboot_state() {
-    fastboot devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
+    "$FASTBOOT" devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
 }
 
 # fastboot getvar writes to stderr; parse "name: value" out of it
 get_fastboot_var() {
     local var="$1"
-    fastboot getvar "$var" 2>&1 | awk -F': ' -v v="$var" '$0 ~ "^"v": " {print $2; exit}'
+    "$FASTBOOT" getvar "$var" 2>&1 | awk -F': ' -v v="$var" '$0 ~ "^"v": " {print $2; exit}'
 }
 
 wait_for_fastbootd() {
@@ -137,6 +137,12 @@ elapsed() {
     echo $((now - START_TIME))
 }
 
+# ---------- Bundled tools ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh" || die "common.sh missing or corrupted"
+FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
+PAYLOAD_DUMPER="$(resolve_bundled_tool "payload-dumper-go-${OS}" "payload-dumper-go")"
+
 # ---------- Banner ----------
 printf '\n%s%s AxionOS Fastboot Flash %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
 printf '%srom: %s   recovery: %s (or fallback from payload)%s\n' "$C_DIM" "$AXION_ZIP" "$RECOVERY_IMG" "$C_RESET"
@@ -144,12 +150,10 @@ printf '%srom: %s   recovery: %s (or fallback from payload)%s\n' "$C_DIM" "$AXIO
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
 
-check_bin fastboot
-ok "fastboot found"
+ok "bundled fastboot ready"
 check_bin unzip
 ok "unzip found"
-check_bin payload-dumper-go "Install it from https://github.com/ssut/payload-dumper-go before running this script."
-ok "payload-dumper-go found"
+ok "bundled payload-dumper-go ready"
 
 [ -n "$(get_fastboot_state)" ] || die "no device detected in fastboot mode. Boot into fastboot and connect via USB, then rerun."
 ok "device detected in fastboot"
@@ -193,7 +197,7 @@ else
     ok "payload.bin found"
 
     info "running payload-dumper-go (this can take a few minutes)..."
-    payload-dumper-go -o "$IMAGES_DIR" "${AXION_DIR}/payload.bin" \
+    "$PAYLOAD_DUMPER" -o "$IMAGES_DIR" "${AXION_DIR}/payload.bin" \
         || die "payload-dumper-go failed to extract payload.bin."
     ok "images extracted to $IMAGES_DIR"
 
@@ -217,7 +221,7 @@ step "Wiping (${FLASH_TYPE} flash)"
 if [ "$FLASH_TYPE" = "clean" ]; then
     [ -n "$(get_fastboot_state)" ] || die "device not in fastboot mode. Boot into fastboot first, then rerun."
     info "running 'fastboot -w'..."
-    fastboot -w || die "'fastboot -w' failed."
+    "$FASTBOOT" -w || die "'fastboot -w' failed."
     ok "user data erased"
 else
     info "dirty flash selected, skipping wipe"
@@ -228,7 +232,7 @@ step "Flashing static partitions (bootloader)"
 
 for partition in "${STATIC_PARTITIONS[@]}"; do
     info "flashing ${partition}..."
-    if fastboot flash "$partition" "${IMAGES_DIR}/${partition}.img"; then
+    if "$FASTBOOT" flash "$partition" "${IMAGES_DIR}/${partition}.img"; then
         ok "${partition} flashed"
     else
         die "failed to flash '${partition}'."
@@ -237,11 +241,11 @@ done
 
 if [ -f "$RECOVERY_IMG" ]; then
     info "flashing recovery (custom OFOX from root folder)..."
-    fastboot flash recovery "$RECOVERY_IMG" || die "failed to flash recovery."
+    "$FASTBOOT" flash recovery "$RECOVERY_IMG" || die "failed to flash recovery."
     ok "recovery flashed (custom OFOX)"
 elif [ -f "${IMAGES_DIR}/recovery.img" ]; then
     info "flashing recovery (stock, from payload — no custom recovery.img found in root)..."
-    fastboot flash recovery "${IMAGES_DIR}/recovery.img" || die "failed to flash recovery."
+    "$FASTBOOT" flash recovery "${IMAGES_DIR}/recovery.img" || die "failed to flash recovery."
     ok "recovery flashed (from payload)"
 else
     die "no recovery image available — '$RECOVERY_IMG' not found in root and payload didn't produce '${IMAGES_DIR}/recovery.img'. Place a custom recovery.img in the root folder and rerun."
@@ -251,7 +255,7 @@ fi
 step "Entering fastbootd"
 
 info "sending 'fastboot reboot fastboot'..."
-fastboot reboot fastboot || die "'fastboot reboot fastboot' failed."
+"$FASTBOOT" reboot fastboot || die "'fastboot reboot fastboot' failed."
 wait_for_fastbootd "$FASTBOOTD_WAIT_TIMEOUT"
 
 # ---------- Step 8: Flash logical partitions ----------
@@ -259,7 +263,7 @@ step "Flashing logical partitions (fastbootd)"
 
 for partition in "${LOGICAL_PARTITIONS[@]}"; do
     info "flashing ${partition}..."
-    if fastboot flash "$partition" "${IMAGES_DIR}/${partition}.img"; then
+    if "$FASTBOOT" flash "$partition" "${IMAGES_DIR}/${partition}.img"; then
         ok "${partition} flashed"
     else
         die "failed to flash '${partition}'. If this says 'not enough space', your previous ROM's partition layout likely differs from AxionOS's — you'll need to manually delete-logical-partition '${partition}' (both _a and _b slots) and retry."
@@ -270,7 +274,7 @@ done
 step "Finishing up"
 
 info "rebooting..."
-if fastboot reboot; then
+if "$FASTBOOT" reboot; then
     ok "reboot command sent"
 else
     warn "'fastboot reboot' failed — reboot manually."

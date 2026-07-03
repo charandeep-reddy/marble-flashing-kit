@@ -66,11 +66,11 @@ check_bin() {
 }
 
 get_adb_state() {
-    adb devices 2>/dev/null | awk 'NR>1 && NF {print $2; exit}'
+    "$ADB" devices 2>/dev/null | awk 'NR>1 && NF {print $2; exit}'
 }
 
 get_fastboot_state() {
-    fastboot devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
+    "$FASTBOOT" devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
 }
 
 wait_for_adb_state() {
@@ -111,6 +111,12 @@ elapsed() {
     echo $((now - START_TIME))
 }
 
+# ---------- Bundled tools ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh" || die "common.sh missing or corrupted"
+ADB="$(resolve_bundled_tool "platform-tools-${OS}" "adb")"
+FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
+
 ask_flash_type() {
     printf '\n  %sHow do you want to flash %s?%s\n\n' "$C_BOLD" "$AXION_ZIP" "$C_RESET"
     printf '    %s1)%s Dirty flash  %s— install over existing setup, no wipes%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
@@ -145,10 +151,8 @@ printf '%srom: %s%s\n' "$C_DIM" "$AXION_ZIP" "$C_RESET"
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
 
-check_bin adb
-ok "adb found"
-check_bin fastboot
-ok "fastboot found"
+ok "bundled adb ready"
+ok "bundled fastboot ready"
 
 if [ -f "$AXION_ZIP" ]; then
     ok "$AXION_ZIP found ($(du -h "$AXION_ZIP" | cut -f1))"
@@ -168,7 +172,7 @@ step "Wiping (${FLASH_TYPE} flash)"
 
 if [ "$FLASH_TYPE" = "clean" ]; then
     info "running 'fastboot -w'..."
-    fastboot -w || die "'fastboot -w' failed."
+    "$FASTBOOT" -w || die "'fastboot -w' failed."
     ok "user data erased"
 else
     info "dirty flash selected, skipping wipes"
@@ -179,10 +183,10 @@ step "Rebooting to recovery"
 
 if [ -n "$(get_fastboot_state)" ]; then
     info "device in fastboot, sending 'fastboot reboot recovery'"
-    fastboot reboot recovery || die "'fastboot reboot recovery' failed."
+    "$FASTBOOT" reboot recovery || die "'fastboot reboot recovery' failed."
 else
     info "device already booted, sending 'adb reboot recovery'"
-    adb reboot recovery || die "'adb reboot recovery' failed."
+    "$ADB" reboot recovery || die "'adb reboot recovery' failed."
 fi
 
 wait_for_adb_state "recovery" "$RECOVERY_WAIT_TIMEOUT"
@@ -195,14 +199,14 @@ step "Entering sideload mode"
 # adb shell often reports a broken pipe / non-zero exit even on success.
 # We ignore that exit code and instead confirm the real result below.
 info "sending 'adb shell twrp sideload'"
-adb shell twrp sideload >/dev/null 2>&1 || true
+"$ADB" shell twrp sideload >/dev/null 2>&1 || true
 
 wait_for_adb_state "sideload" "$SIDELOAD_WAIT_TIMEOUT"
 
 # ---------- Step 5: Sideload the AxionOS ----------
 step "Sideloading $AXION_ZIP"
 
-if adb sideload "$AXION_ZIP"; then
+if "$ADB" sideload "$AXION_ZIP"; then
     ok "transfer + install completed"
 else
     die "adb sideload failed. Check cable/port, or that $AXION_ZIP is a valid signed zip."
@@ -216,7 +220,7 @@ countdown "$POST_SIDELOAD_SETTLE" "waiting for minadbd -> adbd handover"
 
 if ask_reboot_system; then
     info "rebooting to system..."
-    if adb reboot; then
+    if "$ADB" reboot; then
         ok "reboot command sent"
     else
         warn "'adb reboot' failed — reboot manually from the recovery menu"

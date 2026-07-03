@@ -59,11 +59,11 @@ check_bin() {
 }
 
 get_adb_state() {
-    adb devices 2>/dev/null | awk 'NR>1 && NF {print $2; exit}'
+    "$ADB" devices 2>/dev/null | awk 'NR>1 && NF {print $2; exit}'
 }
 
 get_fastboot_state() {
-    fastboot devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
+    "$FASTBOOT" devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
 }
 
 # Waits for an adb state, printing a single self-updating progress line
@@ -105,6 +105,12 @@ elapsed() {
     echo $((now - START_TIME))
 }
 
+# ---------- Bundled tools ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh" || die "common.sh missing or corrupted"
+ADB="$(resolve_bundled_tool "platform-tools-${OS}" "adb")"
+FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
+
 # ---------- Banner ----------
 printf '\n%s%s AxionOS Sideload Flash %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
 printf '%sfirmware: %s%s\n' "$C_DIM" "$FIRMWARE_ZIP" "$C_RESET"
@@ -112,10 +118,8 @@ printf '%sfirmware: %s%s\n' "$C_DIM" "$FIRMWARE_ZIP" "$C_RESET"
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
 
-check_bin adb
-ok "adb found"
-check_bin fastboot
-ok "fastboot found"
+ok "bundled adb ready"
+ok "bundled fastboot ready"
 
 if [ -f "$FIRMWARE_ZIP" ]; then
     ok "$FIRMWARE_ZIP found ($(du -h "$FIRMWARE_ZIP" | cut -f1))"
@@ -133,10 +137,10 @@ step "Rebooting to recovery"
 
 if [ -n "$(get_fastboot_state)" ]; then
     info "device in fastboot, sending 'fastboot reboot recovery'"
-    fastboot reboot recovery || die "'fastboot reboot recovery' failed."
+    "$FASTBOOT" reboot recovery || die "'fastboot reboot recovery' failed."
 else
     info "device already booted, sending 'adb reboot recovery'"
-    adb reboot recovery || die "'adb reboot recovery' failed."
+    "$ADB" reboot recovery || die "'adb reboot recovery' failed."
 fi
 
 wait_for_adb_state "recovery" "$RECOVERY_WAIT_TIMEOUT"
@@ -149,14 +153,14 @@ step "Entering sideload mode"
 # adb shell often reports a broken pipe / non-zero exit even on success.
 # We ignore that exit code and instead confirm the real result below.
 info "sending 'adb shell twrp sideload'"
-adb shell twrp sideload >/dev/null 2>&1 || true
+"$ADB" shell twrp sideload >/dev/null 2>&1 || true
 
 wait_for_adb_state "sideload" "$SIDELOAD_WAIT_TIMEOUT"
 
 # ---------- Step 4: Sideload the zip ----------
 step "Sideloading $FIRMWARE_ZIP"
 
-if adb sideload "$FIRMWARE_ZIP"; then
+if "$ADB" sideload "$FIRMWARE_ZIP"; then
     ok "transfer + install completed"
 else
     die "adb sideload failed. Check cable/port, or that $FIRMWARE_ZIP is a valid signed zip."
@@ -171,7 +175,7 @@ countdown "$POST_SIDELOAD_SETTLE" "waiting for minadbd -> adbd handover"
 # ---------- Step 6: Reboot to bootloader ----------
 step "Rebooting to bootloader"
 
-if adb reboot bootloader; then
+if "$ADB" reboot bootloader; then
     info "reboot command sent"
 else
     die "'adb reboot bootloader' failed. Device may still be mid-handover — rerun manually: adb reboot bootloader"

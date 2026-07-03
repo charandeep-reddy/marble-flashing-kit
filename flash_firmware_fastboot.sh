@@ -67,7 +67,7 @@ check_bin() {
 }
 
 get_fastboot_state() {
-    fastboot devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
+    "$FASTBOOT" devices 2>/dev/null | awk 'NF {print "fastboot"; exit}'
 }
 
 elapsed() {
@@ -76,6 +76,11 @@ elapsed() {
     echo $((now - START_TIME))
 }
 
+# ---------- Bundled tools ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common.sh" || die "common.sh missing or corrupted"
+FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
+
 # ---------- Banner ----------
 printf '\n%s%s Firmware Fastboot Flash %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
 printf '%sdevice: marble (Poco F5) | firmware: %s%s\n' "$C_DIM" "$FIRMWARE_ZIP" "$C_RESET"
@@ -83,8 +88,7 @@ printf '%sdevice: marble (Poco F5) | firmware: %s%s\n' "$C_DIM" "$FIRMWARE_ZIP" 
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
 
-check_bin fastboot
-ok "fastboot found"
+ok "bundled fastboot ready"
 check_bin unzip "Install unzip (e.g. brew install unzip / apt install unzip)."
 ok "unzip found"
 
@@ -128,7 +132,7 @@ for partition in "${partitions[@]}"; do
     printf '  %s[%d/%d]%s Flashing %s... ' \
         "$C_BOLD$C_BLUE" "$flashed" "$TOTAL_PARTITIONS" "$C_RESET" "$partition"
 
-    if fastboot flash "${partition}_ab" "$img"; then
+    if "$FASTBOOT" flash "${partition}_ab" "$img"; then
         printf '%s✓%s\n' "$C_GREEN" "$C_RESET"
     else
         printf '%s✗%s\n' "$C_RED" "$C_RESET"
