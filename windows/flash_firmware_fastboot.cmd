@@ -20,4 +20,5 @@ if errorlevel 1 (
 powershell -NoProfile -Command "Get-ChildItem '%~dp0*.ps1','%~dp0*.exe','%~dp0*.dll' -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" >nul 2>&1
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PS1%" %*
+pause
 exit /b %ERRORLEVEL%
