@@ -111,7 +111,7 @@ ok "device detected in fastboot mode"
 # ---------- Step 2: Extract firmware ----------
 step "Extracting $FIRMWARE_ZIP"
 
-info "extracting to ${FIRMWARE_DIR}\"
+info "extracting to ${FIRMWARE_DIR}/"
 try {
     Expand-Archive -Path $FIRMWARE_ZIP -DestinationPath $FIRMWARE_DIR -Force
     ok "extraction complete"

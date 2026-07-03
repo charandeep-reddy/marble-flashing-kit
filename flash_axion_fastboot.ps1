@@ -199,7 +199,7 @@ if ((Test-Path $IMAGES_DIR -PathType Container) -and (Get-ChildItem $IMAGES_DIR 
     }
     ok "$AXION_ZIP found"
 
-    info "unzipping $AXION_ZIP -> $AXION_DIR\"
+    info "unzipping $AXION_ZIP -> ${AXION_DIR}/"
     try {
         Expand-Archive -Path $AXION_ZIP -DestinationPath $AXION_DIR -Force
         ok "extracted"
