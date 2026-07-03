@@ -1,6 +1,6 @@
 ﻿#Requires -Version 5.1
 # flash_firmware_sideload.ps1
-# Sideload-flashes AxionOS firmware.zip via OFOX recovery on Poco F5 (marble)
+# Sideload-flashes ROM firmware.zip via OFOX recovery on Poco F5 (marble)
 #
 # Flow:
 #   1. Verify firmware.zip exists
@@ -127,7 +127,7 @@ function Format-Size {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host ">> AxionOS Firmware Sideload" -ForegroundColor Blue
+Write-Host ">> ROM Firmware Sideload" -ForegroundColor Blue
 Write-Host "firmware: $FIRMWARE_ZIP" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------

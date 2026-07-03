@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
 # flash_axion_sideload.sh
-# Sideload-flashes AxionOS axion.zip via OFOX recovery on Poco F5 (marble)
+# Sideload-flashes ROM rom.zip via OFOX recovery on Poco F5 (marble)
 # Prompts for dirty flash vs clean flash before installing.
 #
-# Dirty flash : no wipes, just install axion.zip over existing setup
+# Dirty flash : no wipes, just install rom.zip over existing setup
 # Clean flash : fastboot -w (erase user data), then install
 #
 # Flow:
-#   1. Verify axion.zip exists
+#   1. Verify rom.zip exists
 #   2. Verify adb/fastboot available + device connected
 #   3. Ask user: dirty or clean flash
 #   4. [clean only] fastboot -w
@@ -16,7 +16,7 @@
 #   6. Wait for full adb (device state = recovery)
 #   7. adb shell twrp sideload
 #   8. Wait for sideload state
-#   9. adb sideload axion.zip
+#   9. adb sideload rom.zip
 #  10. Post-sideload settle delay
 #  11. Ask user: reboot to system now? (default yes)
 #
@@ -27,7 +27,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---------- Config ----------
-AXION_ZIP="${SCRIPT_DIR}/axion.zip"
+ROM_ZIP="${SCRIPT_DIR}/rom.zip"
 RECOVERY_WAIT_TIMEOUT=60      # seconds to wait for recovery state
 SIDELOAD_WAIT_TIMEOUT=30      # seconds to wait for sideload state
 POST_SIDELOAD_SETTLE=8        # seconds to wait after sideload completes (encrypted screen / minadbd handover)
@@ -119,7 +119,7 @@ ADB="$(resolve_bundled_tool "platform-tools-${OS}" "adb")"
 FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
 
 ask_flash_type() {
-    printf '\n  %sHow do you want to flash %s?%s\n\n' "$C_BOLD" "$AXION_ZIP" "$C_RESET"
+    printf '\n  %sHow do you want to flash %s?%s\n\n' "$C_BOLD" "$ROM_ZIP" "$C_RESET"
     printf '    %s1)%s Dirty flash  %s— install over existing setup, no wipes%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
     printf '    %s2)%s Clean flash  %s— fastboot -w (erase user data), then install%s\n' "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
     printf '        %s(internal storage / your files are NOT touched either way)%s\n\n' "$C_DIM" "$C_RESET"
@@ -146,8 +146,8 @@ ask_reboot_system() {
 }
 
 # ---------- Banner ----------
-printf '\n%s%s AxionOS Sideload %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
-printf '%srom: %s%s\n' "$C_DIM" "$AXION_ZIP" "$C_RESET"
+printf '\n%s%s ROM Sideload %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
+printf '%srom: %s%s\n' "$C_DIM" "$ROM_ZIP" "$C_RESET"
 
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
@@ -155,10 +155,10 @@ step "Pre-flight checks"
 ok "bundled adb ready"
 ok "bundled fastboot ready"
 
-if [ -f "$AXION_ZIP" ]; then
-    ok "$AXION_ZIP found ($(du -h "$AXION_ZIP" | cut -f1))"
+if [ -f "$ROM_ZIP" ]; then
+    ok "$ROM_ZIP found ($(du -h "$ROM_ZIP" | cut -f1))"
 else
-    die "'$AXION_ZIP' not found in current directory ($(pwd))."
+    die "'$ROM_ZIP' not found in current directory ($(pwd))."
 fi
 
 if [ -z "$(get_fastboot_state)" ] && [ -z "$(get_adb_state)" ]; then
@@ -204,13 +204,13 @@ info "sending 'adb shell twrp sideload'"
 
 wait_for_adb_state "sideload" "$SIDELOAD_WAIT_TIMEOUT"
 
-# ---------- Step 5: Sideload the AxionOS ----------
-step "Sideloading $AXION_ZIP"
+# ---------- Step 5: Sideload the ROM ----------
+step "Sideloading $ROM_ZIP"
 
-if "$ADB" sideload "$AXION_ZIP"; then
+if "$ADB" sideload "$ROM_ZIP"; then
     ok "transfer + install completed"
 else
-    die "adb sideload failed. Check cable/port, or that $AXION_ZIP is a valid signed zip."
+    die "adb sideload failed. Check cable/port, or that $ROM_ZIP is a valid signed zip."
 fi
 
 # ---------- Step 6: Wrapping up ----------
@@ -230,5 +230,5 @@ else
     info "staying in recovery — reboot manually when ready"
 fi
 
-printf '\n%s%s AxionOS install complete (%s flash) — %ds total%s\n\n' \
+printf '\n%s%s ROM install complete (%s flash) — %ds total%s\n\n' \
     "$C_BOLD$C_GREEN" "✓" "$FLASH_TYPE" "$(elapsed)" "$C_RESET"

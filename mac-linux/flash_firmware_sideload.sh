@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # flash_firmware_sideload.sh
-# Sideload-flashes AxionOS firmware.zip via OFOX recovery on Poco F5 (marble)
+# Sideload-flashes ROM firmware.zip via OFOX recovery on Poco F5 (marble)
 #
 # Flow:
 #   1. Verify firmware.zip exists
@@ -113,7 +113,7 @@ ADB="$(resolve_bundled_tool "platform-tools-${OS}" "adb")"
 FASTBOOT="$(resolve_bundled_tool "platform-tools-${OS}" "fastboot")"
 
 # ---------- Banner ----------
-printf '\n%s%s AxionOS Sideload Flash %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
+printf '\n%s%s ROM Sideload Flash %s\n' "$C_BOLD$C_BLUE" "▶" "$C_RESET"
 printf '%sfirmware: %s%s\n' "$C_DIM" "$FIRMWARE_ZIP" "$C_RESET"
 
 # ---------- Step 1: Pre-flight checks ----------

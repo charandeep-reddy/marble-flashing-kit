@@ -1,6 +1,6 @@
 ﻿#Requires -Version 5.1
 # flash_axion_fastboot.ps1
-# Flashes AxionOS on Poco F5 (marble) fully via fastboot/fastbootd — no sideload.
+# Flashes ROM on Poco F5 (marble) fully via fastboot/fastbootd — no sideload.
 # Requires device already sitting in fastboot (bootloader) mode.
 #
 # Dirty flash : no wipes, straight install
@@ -9,7 +9,7 @@
 # Flow:
 #   1. Pre-flight checks (deps, device in fastboot mode)
 #   2. Bootloader unlock check
-#   3. Extract axion.zip -> axion/images/ (skipped if already present + valid)
+#   3. Extract rom.zip -> axion/images/ (skipped if already present + valid)
 #   4. Ask user: dirty or clean flash
 #   5. [clean only] fastboot -w
 #   6. Flash static partitions (boot, vendor_boot, dtbo, vbmeta, vbmeta_system)
@@ -23,10 +23,10 @@
 $ErrorActionPreference = "Stop"
 
 # ---------- Config ----------
-$AXION_ZIP = "$PSScriptRoot\axion.zip"
+$ROM_ZIP = "$PSScriptRoot\rom.zip"
 $RECOVERY_IMG = "$PSScriptRoot\recovery.img"          # root-folder OFOX build (optional) — fallback is axion/images/recovery.img from payload
-$AXION_DIR = "$PSScriptRoot\axion"
-$IMAGES_DIR = "$AXION_DIR\images"
+$ROM_DIR = "$PSScriptRoot\axion"
+$IMAGES_DIR = "$ROM_DIR\images"
 $FASTBOOTD_WAIT_TIMEOUT = 60
 $POLL_INTERVAL = 1
 
@@ -115,7 +115,7 @@ function Wait-Fastbootd {
 
 function Ask-FlashType {
     Write-Host ""
-    Write-Host "  How do you want to flash $AXION_ZIP?" -ForegroundColor White
+    Write-Host "  How do you want to flash $ROM_ZIP?" -ForegroundColor White
     Write-Host ""
     Write-Host "    1) Dirty flash  — install over existing setup, no wipes" -ForegroundColor Cyan
     Write-Host "    2) Clean flash  — fastboot -w (erase user data), then install" -ForegroundColor Cyan
@@ -149,8 +149,8 @@ function elapsed {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host ">> AxionOS Fastboot Flash" -ForegroundColor Blue
-Write-Host "rom: $AXION_ZIP   recovery: $RECOVERY_IMG (or fallback from payload)" -ForegroundColor Gray
+Write-Host ">> ROM Fastboot Flash" -ForegroundColor Blue
+Write-Host "rom: $ROM_ZIP   recovery: $RECOVERY_IMG (or fallback from payload)" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
@@ -173,7 +173,7 @@ if ($UNLOCKED -eq "yes") {
     die "bootloader is not unlocked (reported: '$UNLOCKED'). Unlock it before flashing."
 }
 
-# ---------- Step 3: Extract axion.zip ----------
+# ---------- Step 3: Extract rom.zip ----------
 step "Preparing images"
 
 if ((Test-Path $IMAGES_DIR -PathType Container) -and (Get-ChildItem $IMAGES_DIR -File).Count -gt 0) {
@@ -186,34 +186,34 @@ if ((Test-Path $IMAGES_DIR -PathType Container) -and (Get-ChildItem $IMAGES_DIR 
         }
     }
     if ($missing.Count -gt 0) {
-        die "'$IMAGES_DIR' exists but is missing images for: $($missing -join ' '). Delete '$AXION_DIR' and rerun to re-extract."
+        die "'$IMAGES_DIR' exists but is missing images for: $($missing -join ' '). Delete '$ROM_DIR' and rerun to re-extract."
     }
     ok "cached images verified complete"
 } else {
-    if (-not (Ask-YesNo -Prompt "Make sure '$AXION_ZIP' is in this folder (recovery.img is optional — falls back to payload's if missing). Ready?")) {
-        die "place '$AXION_ZIP' in this folder, then rerun."
+    if (-not (Ask-YesNo -Prompt "Make sure '$ROM_ZIP' is in this folder (recovery.img is optional — falls back to payload's if missing). Ready?")) {
+        die "place '$ROM_ZIP' in this folder, then rerun."
     }
 
-    if (-not (Test-Path $AXION_ZIP -PathType Leaf)) {
-        die "'$AXION_ZIP' not found in current directory ($PWD)."
+    if (-not (Test-Path $ROM_ZIP -PathType Leaf)) {
+        die "'$ROM_ZIP' not found in current directory ($PWD)."
     }
-    ok "$AXION_ZIP found"
+    ok "$ROM_ZIP found"
 
-    info "unzipping $AXION_ZIP -> ${AXION_DIR}/"
+    info "unzipping $ROM_ZIP -> ${ROM_DIR}/"
     try {
-        Expand-Archive -Path $AXION_ZIP -DestinationPath $AXION_DIR -Force
+        Expand-Archive -Path $ROM_ZIP -DestinationPath $ROM_DIR -Force
         ok "extracted"
     } catch {
-        die "failed to unzip $AXION_ZIP."
+        die "failed to unzip $ROM_ZIP."
     }
 
-    if (-not (Test-Path "$AXION_DIR\payload.bin" -PathType Leaf)) {
-        die "'payload.bin' not found inside $AXION_ZIP."
+    if (-not (Test-Path "$ROM_DIR\payload.bin" -PathType Leaf)) {
+        die "'payload.bin' not found inside $ROM_ZIP."
     }
     ok "payload.bin found"
 
     info "running payload-dumper-go (this can take a few minutes)..."
-    & $PAYLOAD_DUMPER -o $IMAGES_DIR "$AXION_DIR\payload.bin"
+    & $PAYLOAD_DUMPER -o $IMAGES_DIR "$ROM_DIR\payload.bin"
     if ($LASTEXITCODE -ne 0) {
         die "payload-dumper-go failed to extract payload.bin."
     }
@@ -294,7 +294,7 @@ foreach ($partition in $LOGICAL_PARTITIONS) {
     if ($LASTEXITCODE -eq 0) {
         ok "$partition flashed"
     } else {
-        die "failed to flash '$partition'. If this says 'not enough space', your previous ROM's partition layout likely differs from AxionOS's — you'll need to manually delete-logical-partition '$partition' (both _a and _b slots) and retry."
+        die "failed to flash '$partition'. If this says 'not enough space', your previous ROM's partition layout likely differs from ROM's — you'll need to manually delete-logical-partition '$partition' (both _a and _b slots) and retry."
     }
 }
 
@@ -310,5 +310,5 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
-Write-Host "[*] AxionOS flash complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
+Write-Host "[*] ROM flash complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
 Write-Host ""

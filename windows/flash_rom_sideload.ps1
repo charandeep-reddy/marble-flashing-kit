@@ -1,13 +1,13 @@
 ﻿#Requires -Version 5.1
 # flash_axion_sideload.ps1
-# Sideload-flashes AxionOS axion.zip via OFOX recovery on Poco F5 (marble)
+# Sideload-flashes ROM rom.zip via OFOX recovery on Poco F5 (marble)
 # Prompts for dirty flash vs clean flash before installing.
 #
-# Dirty flash : no wipes, just install axion.zip over existing setup
+# Dirty flash : no wipes, just install rom.zip over existing setup
 # Clean flash : fastboot -w (erase user data), then install
 #
 # Flow:
-#   1. Verify axion.zip exists
+#   1. Verify rom.zip exists
 #   2. Verify bundled adb/fastboot + device connected
 #   3. Ask user: dirty or clean flash
 #   4. [clean only] fastboot -w
@@ -15,7 +15,7 @@
 #   6. Wait for full adb (device state = recovery)
 #   7. adb shell twrp sideload
 #   8. Wait for sideload state
-#   9. adb sideload axion.zip
+#   9. adb sideload rom.zip
 #  10. Post-sideload settle delay
 #  11. Ask user: reboot to system now? (default yes)
 #
@@ -24,7 +24,7 @@
 $ErrorActionPreference = "Stop"
 
 # ---------- Config ----------
-$AXION_ZIP = "$PSScriptRoot\axion.zip"
+$ROM_ZIP = "$PSScriptRoot\rom.zip"
 $RECOVERY_WAIT_TIMEOUT = 60
 $SIDELOAD_WAIT_TIMEOUT = 30
 $POST_SIDELOAD_SETTLE = 8
@@ -134,7 +134,7 @@ function Format-Size {
 
 function Ask-FlashType {
     Write-Host ""
-    Write-Host "  How do you want to flash $AXION_ZIP?" -ForegroundColor White
+    Write-Host "  How do you want to flash $ROM_ZIP?" -ForegroundColor White
     Write-Host ""
     Write-Host "    1) Dirty flash  — install over existing setup, no wipes" -ForegroundColor Cyan
     Write-Host "    2) Clean flash  — fastboot -w (erase user data), then install" -ForegroundColor Cyan
@@ -163,8 +163,8 @@ function Ask-RebootSystem {
 
 # ---------- Banner ----------
 Write-Host ""
-Write-Host ">> AxionOS Sideload" -ForegroundColor Blue
-Write-Host "rom: $AXION_ZIP" -ForegroundColor Gray
+Write-Host ">> ROM Sideload" -ForegroundColor Blue
+Write-Host "rom: $ROM_ZIP" -ForegroundColor Gray
 
 # ---------- Step 1: Pre-flight checks ----------
 step "Pre-flight checks"
@@ -172,10 +172,10 @@ step "Pre-flight checks"
 ok "bundled adb ready"
 ok "bundled fastboot ready"
 
-if (Test-Path $AXION_ZIP -PathType Leaf) {
-    ok "$AXION_ZIP found ($(Format-Size $AXION_ZIP))"
+if (Test-Path $ROM_ZIP -PathType Leaf) {
+    ok "$ROM_ZIP found ($(Format-Size $ROM_ZIP))"
 } else {
-    die "'$AXION_ZIP' not found in current directory ($PWD)."
+    die "'$ROM_ZIP' not found in current directory ($PWD)."
 }
 
 if (-not (Get-FastbootState) -and -not (Get-AdbState)) {
@@ -224,14 +224,14 @@ $null = cmd /c "`"$ADB`" shell twrp sideload 2>&1"
 
 Wait-AdbState -Target "sideload" -Timeout $SIDELOAD_WAIT_TIMEOUT
 
-# ---------- Step 5: Sideload the AxionOS ----------
-step "Sideloading $AXION_ZIP"
+# ---------- Step 5: Sideload the ROM ----------
+step "Sideloading $ROM_ZIP"
 
-& $ADB sideload $AXION_ZIP
+& $ADB sideload $ROM_ZIP
 if ($LASTEXITCODE -eq 0) {
     ok "transfer + install completed"
 } else {
-    die "adb sideload failed. Check cable/port, or that $AXION_ZIP is a valid signed zip."
+    die "adb sideload failed. Check cable/port, or that $ROM_ZIP is a valid signed zip."
 }
 
 # ---------- Step 6: Settle + reboot ----------
@@ -253,5 +253,5 @@ if (Ask-RebootSystem) {
 }
 
 Write-Host ""
-Write-Host "[*] AxionOS install complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
+Write-Host "[*] ROM install complete ($FLASH_TYPE flash) — $(elapsed)s total" -ForegroundColor Green
 Write-Host ""

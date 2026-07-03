@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set "PS1=%~dp0flash_axion_fastboot.ps1"
+set "PS1=%~dp0flash_rom_sideload.ps1"
 if not exist "%PS1%" (
     echo Error: %PS1% not found.
-    echo Place this launcher alongside flash_axion_fastboot.ps1.
+    echo Place this launcher alongside flash_rom_sideload.ps1.
     pause
     exit /b 1
 )
