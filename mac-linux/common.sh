@@ -19,6 +19,13 @@ case "$(uname -s)" in
     *)       OS="unknown" ;;
 esac
 
+# Remove macOS quarantine from bundled binaries so they can execute.
+# This only runs on macOS and only affects the tool directories.
+if [ "$OS" = "darwin" ]; then
+    xattr -dr com.apple.quarantine "${SCRIPT_DIR}/platform-tools-darwin" 2>/dev/null || true
+    xattr -dr com.apple.quarantine "${SCRIPT_DIR}/payload-dumper-go-darwin" 2>/dev/null || true
+fi
+
 # Resolve a bundled executable path.
 # Verify it exists and is executable; chmod +x once if needed.
 # Usage: path=$(resolve_bundled_tool "subdir" "filename")
